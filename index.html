@@ -37,13 +37,13 @@ OneSignalDeferred.push(async function(OneSignal){
 <section class="section" id="discover"><div class="section-head"><div><div class="kicker">FIND YOUR NEXT FAVOURITE</div><h2>Discover</h2></div><span class="subtle">Movies & series</span></div>
 <div class="search"><span>⌕</span><input id="searchInput" placeholder="Search movies and TV shows..." autocomplete="off"><button id="searchBtn">Search</button></div><div id="searchStatus" class="status">Search titles from the entertainment catalogue.</div><div id="results" class="grid"></div></section>
 <section class="section" id="watchlist"><div class="section-head"><div><div class="kicker">SAVED FOR LATER</div><h2>My watchlist</h2></div><span class="subtle" id="watchCount">Sign in to sync across devices</span></div><div id="watchlistItems" class="grid"><div class="empty">Your saved titles will appear here after you sign in.</div></div></section>
-<section class="vision-banner" id="vision"><div class="vision-badge">V</div><div><div class="kicker">YOUR ENTERTAINMENT INTELLIGENCE</div><h2>Have a question? Ask VISION.</h2><p>Get recommendations, compare stories, and explore your favourite fictional worlds.</p></div><button class="cta" id="openVision">Chat with VISION ↗</button></section>
+<section class="vision-banner" id="vision"><img class="vision-avatar banner-avatar" src="/vision-avatar.png" alt="VISION AI avatar"><div><div class="kicker">YOUR ENTERTAINMENT INTELLIGENCE</div><h2>Have a question? Ask VISION.</h2><p>Get recommendations, compare stories, and explore your favourite fictional worlds.</p></div><button class="cta" id="openVision">Chat with VISION ↗</button></section>
 <footer>REELORA <span>•</span> Your stories, in one place.</footer>
 </main></div>
 
-<button class="float-vision" id="floatVision" aria-label="Open VISION assistant"><span>V</span><small>Ask VISION</small></button>
+<button class="float-vision" id="floatVision" aria-label="Open VISION assistant"><img src="/vision-avatar.png" alt=""><small>Ask VISION</small></button>
 <div class="chat-panel" id="chatPanel" aria-label="VISION assistant">
-<div class="chat-head"><div class="vision-mini"><span class="vision-badge small">V</span><div><b>VISION</b><small>REELORA intelligence</small></div></div><button class="icon-btn" id="closeVision" aria-label="Close">×</button></div>
+<div class="chat-head"><div class="vision-mini"><img class="vision-avatar chat-avatar" src="/vision-avatar.png" alt="VISION AI avatar"><div><b>VISION</b><small>REELORA intelligence</small></div></div><button class="icon-btn" id="closeVision" aria-label="Close">×</button></div>
 <div class="chat-messages" id="chatMessages"><div class="bubble assistant">I'm VISION. Looking for your next favourite, comparing two series, or investigating a plot? Let's get into it. ✨</div></div>
 <div class="chat-compose"><textarea id="visionInput" rows="1" placeholder="Ask VISION anything about entertainment..."></textarea><button id="sendVision">↑</button></div><div class="chat-foot">VISION can make mistakes. Verify time-sensitive release details.</div>
 </div>
