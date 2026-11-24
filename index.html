@@ -51,6 +51,14 @@ window.oneSignalReady = new Promise(resolve => {
 <div class="chat-compose"><textarea id="visionInput" rows="1" placeholder="Ask VISION anything about entertainment..."></textarea><button id="sendVision">↑</button></div><div class="chat-foot">VISION can make mistakes. Verify time-sensitive release details.</div>
 </div>
 
+<div class="detail-modal hidden" id="detailModal" role="dialog" aria-modal="true" aria-label="Title details">
+  <div class="detail-backdrop" id="detailBackdrop"></div>
+  <section class="detail-dialog">
+    <button class="icon-btn detail-close" id="detailClose" aria-label="Close details">×</button>
+    <div id="detailContent" class="detail-content"><div class="detail-loading">Loading title details…</div></div>
+  </section>
+</div>
+
 <div class="modal hidden" id="authModal"><div class="modal-card"><button class="icon-btn modal-close" id="authClose">×</button><div class="kicker">YOUR REELORA ACCOUNT</div><h2>Welcome back.</h2><p class="subtle">Sign in to sync your watchlist across devices.</p>
 <input id="email" type="email" placeholder="Email address"><input id="password" type="password" placeholder="Password">
 <div class="auth-actions"><button class="cta full" id="loginBtn">Sign in</button><button class="ghost full" id="registerBtn">Create account</button><button class="google full" id="googleBtn">Continue with Google</button></div><div id="authStatus" class="status"></div></div></div>

@@ -4,3 +4,59 @@
 
 .release-alert-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 17px;margin:0 0 16px;background:linear-gradient(110deg,#211a32,#171321);border:1px solid rgba(196,181,253,.18);border-radius:12px}.release-alert-card b,.release-alert-card small{display:block}.release-alert-card b{font:600 13px Manrope}.release-alert-card small{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5}.release-alert-card .cta{margin:0;white-space:nowrap}.release-alert-card button:disabled{opacity:.6;cursor:wait}
 @media(max-width:520px){.release-alert-card{align-items:flex-start;flex-direction:column}.release-alert-card .cta{width:100%}}
+
+
+/* REELORA title details */
+.title-card .poster-click,.title-card .title-click{cursor:pointer}
+.title-card .poster-click:focus-visible,.title-card .title-click:focus-visible{outline:2px solid var(--purple);outline-offset:-3px}
+.title-card .title-click:hover{color:#d4c2ff}
+.detail-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px}
+.detail-modal.hidden{display:none}
+.detail-backdrop{position:absolute;inset:0;background:rgba(3,2,8,.86);backdrop-filter:blur(9px)}
+.detail-dialog{position:relative;width:min(900px,100%);max-height:min(90vh,900px);overflow:auto;background:#100e19;border:1px solid rgba(196,181,253,.25);border-radius:19px;box-shadow:0 25px 100px #000c}
+.detail-close{position:sticky;float:right;top:12px;right:12px;z-index:3;width:38px;height:38px;border-radius:50%;background:#171321eF;font-size:24px}
+.detail-content{min-height:180px}
+.detail-loading,.detail-error{padding:55px 24px;text-align:center;color:var(--muted)}
+.detail-hero{min-height:340px;padding:38px 34px;display:grid;grid-template-columns:190px 1fr;gap:28px;align-items:center;background-color:#1a1426;background-size:cover;background-position:center;position:relative}
+.detail-poster{display:block;width:100%;max-width:190px;aspect-ratio:2/3;object-fit:cover;border-radius:11px;box-shadow:0 18px 45px #0009;background:#242034}
+.detail-copy{min-width:0}
+.detail-copy h2{font:800 clamp(25px,4vw,42px)/1.08 Manrope;margin:12px 0;color:#fff}
+.detail-tagline{color:#d5c7ec;font-size:13px;font-style:italic;margin:0 0 17px}
+.detail-meta{display:flex;gap:9px 18px;flex-wrap:wrap;margin-top:20px}
+.detail-meta-item{display:grid;gap:4px;font-size:11px;color:#d4cce1}
+.detail-meta-item b{font-size:9px;letter-spacing:1.2px;color:#a99bbd}
+.detail-genres{display:flex;flex-wrap:wrap;gap:7px;margin-top:17px}
+.detail-genres span{padding:6px 10px;border:1px solid #8069a966;border-radius:30px;color:#e2d6fa;font-size:10px;background:#17132199}
+.detail-overview{padding:25px 34px 10px}
+.detail-overview p{color:#c7bfd4;font-size:13px;line-height:1.85;max-width:760px;margin:10px 0}
+.detail-actions{display:flex;gap:10px;padding:12px 34px 20px;flex-wrap:wrap}
+.detail-actions .cta{margin:0}
+.tmdb-attribution{display:block;padding:0 34px 25px;color:#777087;font-size:9px;line-height:1.5}
+.detail-error{color:#ffb7bd}
+body.detail-open{overflow:hidden}
+@media(max-width:600px){
+ .detail-modal{padding:8px}
+ .detail-dialog{max-height:94vh;border-radius:15px}
+ .detail-hero{grid-template-columns:105px 1fr;gap:16px;padding:55px 17px 22px;min-height:0;background-position:center}
+ .detail-poster{max-width:105px;border-radius:8px}
+ .detail-copy h2{font-size:23px;margin:8px 0}
+ .detail-tagline{font-size:11px;margin-bottom:10px}
+ .detail-meta{gap:10px 13px;margin-top:12px}
+ .detail-meta-item{font-size:10px}
+ .detail-genres{gap:5px;margin-top:12px}
+ .detail-genres span{font-size:9px;padding:5px 8px}
+ .detail-overview{padding:20px 18px 5px}
+ .detail-overview p{font-size:12px}
+ .detail-actions{padding:12px 18px 18px}
+ .tmdb-attribution{padding:0 18px 20px}
+}
+
+/* Live premiere countdown */
+.release-countdown{margin:18px 34px 4px;padding:17px 18px;border:1px solid rgba(182,154,246,.28);border-radius:13px;background:linear-gradient(110deg,#211a32,#15111f)}
+.countdown-date{display:block;margin-top:5px;color:var(--muted);font-size:10px}
+.countdown-clock{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
+.countdown-unit{min-width:67px;padding:10px 9px;text-align:center;border-radius:9px;background:#0c0a14;border:1px solid rgba(196,181,253,.16)}
+.countdown-unit b,.countdown-unit small{display:block}
+.countdown-unit b{font:800 23px Manrope;color:#e7dcff;font-variant-numeric:tabular-nums}
+.countdown-unit small{margin-top:3px;color:#a99bbd;font-size:8px;letter-spacing:1.2px}
+@media(max-width:600px){.release-countdown{margin:14px 18px 2px;padding:14px}.countdown-clock{gap:6px}.countdown-unit{flex:1;min-width:56px;padding:9px 5px}.countdown-unit b{font-size:19px}}

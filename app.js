@@ -16,6 +16,7 @@ setPersistence(auth, browserLocalPersistence).catch(console.error);
 const $ = id => document.getElementById(id);
 let currentUser = null, stopWatchlist = null;
 let chatHistory = [];
+let countdownTimer = null;
 
 function authStatus(message){ $("authStatus").textContent = message; }
 function showAuth(){ $("authModal").classList.remove("hidden"); }
@@ -41,15 +42,128 @@ onAuthStateChanged(auth, user => {
 function posterUrl(path){return path ? `https://image.tmdb.org/t/p/w342${path}` : "";}
 function titleCard(item, saved=false) {
   const card=document.createElement("article");card.className="title-card";
-  const img=document.createElement("img");img.alt=item.title;img.loading="lazy";
+  const detailItem = saved ? { ...item, id: item.tmdbId } : item;
+  const img=document.createElement("img");img.alt=`View details for ${item.title}`;img.loading="lazy";
   if(item.poster_path) img.src=posterUrl(item.poster_path); else img.style.visibility="hidden";
+  img.className="poster-click";img.tabIndex=0;img.setAttribute("role","button");
+  img.onclick=()=>openDetails(detailItem);
+  img.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetails(detailItem);}};
   const info=document.createElement("div");info.className="title-info";
-  const title=document.createElement("b");title.textContent=item.title;
+  const title=document.createElement("b");title.textContent=item.title;title.className="title-click";
+  title.tabIndex=0;title.setAttribute("role","button");title.onclick=()=>openDetails(detailItem);
+  title.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetails(detailItem);}};
   const meta=document.createElement("small");meta.textContent=`${item.media_type==="tv"?"TV series":"Movie"}${item.release_date?" · "+item.release_date.slice(0,4):""}`;
   const btn=document.createElement("button");btn.className="save-btn";btn.textContent=saved?"Remove from watchlist":"＋ Add to watchlist";
   btn.onclick=()=>saved?removeWatch(item.id):saveWatch(item);
   info.append(title,meta,btn);card.append(img,info);return card;
 }
+
+function closeDetails(){
+  if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+  $("detailModal").classList.add("hidden");
+  document.body.classList.remove("detail-open");
+}
+$("detailClose").onclick=closeDetails;
+$("detailBackdrop").onclick=closeDetails;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("detailModal").classList.contains("hidden"))closeDetails();});
+
+function detailLine(label,value){
+  if(value===null||value===undefined||value==="") return null;
+  const line=document.createElement("span");line.className="detail-meta-item";
+  const strong=document.createElement("b");strong.textContent=label;
+  const text=document.createElement("span");text.textContent=value;
+  line.append(strong,text);return line;
+}
+async function openDetails(item){
+  if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+  const modal=$("detailModal"), content=$("detailContent");
+  modal.classList.remove("hidden");document.body.classList.add("detail-open");
+  content.replaceChildren();
+  const loading=document.createElement("div");loading.className="detail-loading";loading.textContent="Loading details from TMDB…";content.append(loading);
+  try{
+    const id=item.tmdbId || item.id;
+    const type=item.media_type;
+    const response=await fetch(`/api/tmdb?id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`);
+    const data=await response.json();
+    if(!response.ok) throw new Error(data.error||"Could not load title details.");
+    if(modal.classList.contains("hidden")) return;
+    content.replaceChildren();
+
+    const hero=document.createElement("div");hero.className="detail-hero";
+    if(data.backdrop_path){hero.style.backgroundImage=`linear-gradient(90deg,rgba(9,8,18,.98),rgba(9,8,18,.66) 58%,rgba(9,8,18,.18)),url("https://image.tmdb.org/t/p/w1280${data.backdrop_path}")`;}
+    const poster=document.createElement("img");poster.className="detail-poster";poster.alt=data.title;
+    if(data.poster_path) poster.src=`https://image.tmdb.org/t/p/w500${data.poster_path}`;
+    else poster.src="";
+    const copy=document.createElement("div");copy.className="detail-copy";
+    const eyebrow=document.createElement("div");eyebrow.className="kicker";eyebrow.textContent=type==="tv"?"TELEVISION SERIES":"FEATURE FILM";
+    const heading=document.createElement("h2");heading.textContent=data.title;
+    copy.append(eyebrow,heading);
+    if(data.tagline){const tagline=document.createElement("p");tagline.className="detail-tagline";tagline.textContent=data.tagline;copy.append(tagline);}
+    const meta=document.createElement("div");meta.className="detail-meta";
+    const year=(data.release_date||"").slice(0,4);
+    [detailLine("⭐ TMDB",data.vote_average!==null?`${data.vote_average.toFixed(1)} / 10`:"Not rated"),
+     detailLine("RELEASE",data.release_date||"Not available"),
+     detailLine("TYPE",type==="tv"?"TV series":"Movie"),
+     detailLine("RUNTIME",data.runtime?`${data.runtime} min`:null),
+     detailLine("SEASONS",data.number_of_seasons?String(data.number_of_seasons):null),
+     detailLine("EPISODES",data.number_of_episodes?String(data.number_of_episodes):null)
+    ].filter(Boolean).forEach(x=>meta.append(x));
+    const genres=document.createElement("div");genres.className="detail-genres";
+    (data.genres||[]).forEach(name=>{const chip=document.createElement("span");chip.textContent=name;genres.append(chip);});
+    copy.append(meta,genres);
+    hero.append(poster,copy);content.append(hero);
+
+    // Live countdown to the title's premiere date (TMDB movie release date or TV first-air date).
+    if(data.release_date){
+      const countdown=document.createElement("section");countdown.className="release-countdown";
+      const label=document.createElement("div");label.className="kicker";label.textContent=type==="tv"?"SERIES PREMIERE COUNTDOWN":"PREMIERE COUNTDOWN";
+      const dateLabel=document.createElement("small");dateLabel.className="countdown-date";dateLabel.textContent=`Release date: ${data.release_date}`;
+      const clock=document.createElement("div");clock.className="countdown-clock";clock.setAttribute("aria-live","off");
+      countdown.append(label,dateLabel,clock);content.append(countdown);
+      const premiereDate=new Date(`${data.release_date}T00:00:00`);
+      const updateCountdown=()=>{
+        const remaining=premiereDate.getTime()-Date.now();
+        if(!Number.isFinite(premiereDate.getTime())){clock.textContent="Release date unavailable";return;}
+        if(remaining<=0){clock.textContent="Already premiered";if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}return;}
+        const days=Math.floor(remaining/86400000);
+        const hours=Math.floor((remaining%86400000)/3600000);
+        const minutes=Math.floor((remaining%3600000)/60000);
+        const seconds=Math.floor((remaining%60000)/1000);
+        clock.replaceChildren();
+        [[days,"DAYS"],[hours,"HRS"],[minutes,"MIN"],[seconds,"SEC"]].forEach(([value,unit])=>{
+          const cell=document.createElement("span");cell.className="countdown-unit";
+          const number=document.createElement("b");number.textContent=String(value).padStart(2,"0");
+          const caption=document.createElement("small");caption.textContent=unit;
+          cell.append(number,caption);clock.append(cell);
+        });
+      };
+      updateCountdown();
+      if(premiereDate.getTime()>Date.now())countdownTimer=setInterval(updateCountdown,1000);
+    }
+
+    const overviewWrap=document.createElement("div");overviewWrap.className="detail-overview";
+    const sub=document.createElement("div");sub.className="kicker";sub.textContent="THE STORY";
+    const overview=document.createElement("p");overview.textContent=data.overview||"No synopsis is available for this title yet.";
+    overviewWrap.append(sub,overview);content.append(overviewWrap);
+
+    const actions=document.createElement("div");actions.className="detail-actions";
+    const save=document.createElement("button");save.className="cta";save.textContent="＋ Add to watchlist";
+    save.onclick=async()=>{await saveWatch({...data,media_type:type});save.textContent="Added (if signed in)";};
+    actions.append(save);
+    const close=document.createElement("button");close.className="ghost";close.textContent="Close";close.onclick=closeDetails;actions.append(close);
+    content.append(actions);
+
+    const attribution=document.createElement("small");attribution.className="tmdb-attribution";
+    attribution.textContent="Movie and TV data provided by TMDB. Ratings are user/community scores and may change.";
+    content.append(attribution);
+  }catch(error){
+    content.replaceChildren();
+    const message=document.createElement("p");message.className="detail-error";message.textContent=error.message;
+    const retry=document.createElement("button");retry.className="ghost";retry.textContent="Close";retry.onclick=closeDetails;
+    content.append(message,retry);
+  }
+}
+
 async function searchTitles(){
   const term=$("searchInput").value.trim();if(!term){$("searchStatus").textContent="Enter a title to search.";return;}
   $("searchStatus").textContent="Searching the catalogue…";$("results").replaceChildren();

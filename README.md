@@ -65,3 +65,11 @@ Still to build:
 - Authentication verification/rate limiting on API endpoints before public production use.
 
 TMDB attribution and usage terms apply. Add visible TMDB attribution in the UI before public launch. The scheduled alert job checks the first 300 user documents and up to 100 watchlist items per user per run; expand with pagination before scaling. The app is not affiliated with or endorsed by TMDB.
+
+
+## Title details
+Selecting a movie or TV poster/title opens a detail view powered by TMDB. It displays the synopsis, release date, community rating, genres, runtime or TV season/episode counts when available. TMDB attribution is shown in the detail view. The `/api/tmdb` endpoint supports both search (`?q=`) and detail lookup (`?id=&type=movie|tv`).
+
+
+## Premiere countdown
+The title details modal now shows a live days/hours/minutes/seconds countdown when TMDB provides a future movie release date or TV series first-air date. Once that date is reached, it changes to “Already premiered”. The countdown uses the device's local time zone and counts to the start of the listed release date; TMDB does not provide a precise premiere time through this endpoint.
