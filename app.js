@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, limit, setDoc } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAahjNURpZ2n05kfncqX-p2SEqx1OEzDvc",
@@ -73,6 +73,22 @@ function renderWatchlist(items){
   if(!items.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=currentUser?"Your watchlist is empty. Search for a title and save it here.":"Your saved titles will appear here after you sign in."; $("watchlistItems").append(empty);return;}
   items.forEach(item=>$("watchlistItems").append(titleCard(item,true)));
 }
+async function enableReleaseAlerts(){
+  if(!currentUser){showAuth();authStatus("Sign in first to connect release alerts to your watchlist.");return;}
+  const status=$("alertStatus"), button=$("enableAlerts");
+  try{
+    button.disabled=true;status.textContent="Connecting notifications…";
+    const OneSignal=await window.oneSignalReady;
+    await OneSignal.login(currentUser.uid);
+    await OneSignal.Notifications.requestPermission();
+    const permission=OneSignal.Notifications.permission;
+    await setDoc(doc(db,"users",currentUser.uid,"settings","notifications"),{releaseAlerts:permission===true,updatedAt:serverTimestamp()},{merge:true});
+    status.textContent=permission===true?"This device is subscribed. REELORA can now send release alerts when scheduled.":"Notifications were not allowed. Enable them in your browser settings to receive alerts.";
+    button.textContent=permission===true?"Alerts enabled":"Try again";
+  }catch(e){status.textContent=e.message||"Could not enable notifications.";}
+  finally{button.disabled=false;}
+}
+$("enableAlerts").onclick=enableReleaseAlerts;
 function openChat(){$("chatPanel").classList.add("open");$("visionInput").focus();}
 function closeChat(){$("chatPanel").classList.remove("open");}
 $("floatVision").onclick=openChat;$("openVision").onclick=openChat;$("closeVision").onclick=closeChat;

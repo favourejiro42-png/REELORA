@@ -8,8 +8,11 @@
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
 window.OneSignalDeferred=window.OneSignalDeferred||[];
-OneSignalDeferred.push(async function(OneSignal){
-  await OneSignal.init({appId:"3df98de5-d865-4d92-b379-13fb5fe8f7ef",serviceWorkerPath:"/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/"}});
+window.oneSignalReady = new Promise(resolve => {
+  OneSignalDeferred.push(async function(OneSignal){
+    await OneSignal.init({appId:"3df98de5-d865-4d92-b379-13fb5fe8f7ef",serviceWorkerPath:"/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/"}});
+    window.OneSignal = OneSignal; resolve(OneSignal);
+  });
 });
 </script>
 </head>
@@ -36,7 +39,7 @@ OneSignalDeferred.push(async function(OneSignal){
 </section>
 <section class="section" id="discover"><div class="section-head"><div><div class="kicker">FIND YOUR NEXT FAVOURITE</div><h2>Discover</h2></div><span class="subtle">Movies & series</span></div>
 <div class="search"><span>⌕</span><input id="searchInput" placeholder="Search movies and TV shows..." autocomplete="off"><button id="searchBtn">Search</button></div><div id="searchStatus" class="status">Search titles from the entertainment catalogue.</div><div id="results" class="grid"></div></section>
-<section class="section" id="watchlist"><div class="section-head"><div><div class="kicker">SAVED FOR LATER</div><h2>My watchlist</h2></div><span class="subtle" id="watchCount">Sign in to sync across devices</span></div><div id="watchlistItems" class="grid"><div class="empty">Your saved titles will appear here after you sign in.</div></div></section>
+<section class="section" id="watchlist"><div class="section-head"><div><div class="kicker">SAVED FOR LATER</div><h2>My watchlist</h2></div><span class="subtle" id="watchCount">Sign in to sync across devices</span></div><div class="release-alert-card"><div><b>Release alerts</b><small id="alertStatus">Get notified about premieres and new episodes in your watchlist.</small></div><button class="cta" id="enableAlerts">Enable alerts</button></div><div id="watchlistItems" class="grid"><div class="empty">Your saved titles will appear here after you sign in.</div></div></section>
 <section class="vision-banner" id="vision"><img class="vision-avatar banner-avatar" src="/vision-avatar.png" alt="VISION AI avatar"><div><div class="kicker">YOUR ENTERTAINMENT INTELLIGENCE</div><h2>Have a question? Ask VISION.</h2><p>Get recommendations, compare stories, and explore your favourite fictional worlds.</p></div><button class="cta" id="openVision">Chat with VISION ↗</button></section>
 <footer>REELORA <span>•</span> Your stories, in one place.</footer>
 </main></div>
