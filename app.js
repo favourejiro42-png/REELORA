@@ -146,6 +146,55 @@ async function openDetails(item){
     const overview=document.createElement("p");overview.textContent=data.overview||"No synopsis is available for this title yet.";
     overviewWrap.append(sub,overview);content.append(overviewWrap);
 
+    // TV season browser: load each season's episode list on demand.
+    if(type === "tv" && Array.isArray(data.seasons) && data.seasons.length){
+      const seasonsWrap=document.createElement("section");seasonsWrap.className="season-browser";
+      const seasonsHeading=document.createElement("div");seasonsHeading.className="kicker";seasonsHeading.textContent="SEASONS & EPISODES";
+      const seasonList=document.createElement("div");seasonList.className="season-list";
+      seasonsWrap.append(seasonsHeading,seasonList);content.append(seasonsWrap);
+      data.seasons.forEach(season=>{
+        const seasonBlock=document.createElement("section");seasonBlock.className="season-block";
+        const toggle=document.createElement("button");toggle.type="button";toggle.className="season-toggle";
+        const seasonName=document.createElement("span");seasonName.textContent=season.name || (season.season_number===0?"Specials":`Season ${season.season_number}`);
+        const seasonMeta=document.createElement("small");
+        const dateText=season.air_date?` · ${season.air_date.slice(0,4)}`:"";
+        seasonMeta.textContent=`${season.episode_count||0} episodes${dateText}`;
+        const indicator=document.createElement("span");indicator.className="season-indicator";indicator.textContent="＋";
+        toggle.append(seasonName,seasonMeta,indicator);
+        const episodeArea=document.createElement("div");episodeArea.className="episode-list hidden";
+        let loaded=false,loading=false;
+        toggle.onclick=async()=>{
+          const opening=episodeArea.classList.contains("hidden");
+          episodeArea.classList.toggle("hidden",!opening);indicator.textContent=opening?"−":"＋";
+          if(!opening||loaded||loading)return;
+          loading=true;episodeArea.replaceChildren();
+          const status=document.createElement("p");status.className="episode-status";status.textContent="Loading episodes…";episodeArea.append(status);
+          try{
+            const seasonResponse=await fetch(`/api/tmdb?id=${encodeURIComponent(data.id)}&type=tv&season=${encodeURIComponent(season.season_number)}`);
+            const seasonData=await seasonResponse.json();
+            if(!seasonResponse.ok)throw new Error(seasonData.error||"Could not load this season.");
+            if(modal.classList.contains("hidden"))return;
+            episodeArea.replaceChildren();
+            if(!seasonData.episodes?.length){const empty=document.createElement("p");empty.className="episode-status";empty.textContent="No episode information is available yet.";episodeArea.append(empty);}
+            (seasonData.episodes||[]).forEach(episode=>{
+              const row=document.createElement("article");row.className="episode-card";
+              if(episode.still_path){const still=document.createElement("img");still.loading="lazy";still.alt="";still.src=`https://image.tmdb.org/t/p/w300${episode.still_path}`;row.append(still);}
+              const episodeCopy=document.createElement("div");episodeCopy.className="episode-copy";
+              const episodeTitle=document.createElement("b");episodeTitle.textContent=`${episode.episode_number}. ${episode.name}`;
+              const episodeDate=document.createElement("small");episodeDate.textContent=episode.air_date?`Air date: ${episode.air_date}`:"Air date not announced";
+              const episodeOverview=document.createElement("p");episodeOverview.textContent=episode.overview||"Episode description not available yet.";
+              const episodeState=document.createElement("span");episodeState.className="episode-state";
+              if(episode.air_date){const airTime=new Date(`${episode.air_date}T00:00:00`).getTime();episodeState.textContent=airTime>Date.now()?"UPCOMING":"RELEASED";episodeState.classList.add(airTime>Date.now()?"upcoming":"released");}
+              episodeCopy.append(episodeTitle,episodeDate,episodeOverview);if(episodeState.textContent)episodeCopy.append(episodeState);row.append(episodeCopy);episodeArea.append(row);
+            });
+            loaded=true;
+          }catch(err){episodeArea.replaceChildren();const error=document.createElement("p");error.className="episode-status";error.textContent=err.message;episodeArea.append(error);}
+          finally{loading=false;}
+        };
+        seasonBlock.append(toggle,episodeArea);seasonList.append(seasonBlock);
+      });
+    }
+
     const actions=document.createElement("div");actions.className="detail-actions";
     const save=document.createElement("button");save.className="cta";save.textContent="＋ Add to watchlist";
     save.onclick=async()=>{await saveWatch({...data,media_type:type});save.textContent="Added (if signed in)";};
