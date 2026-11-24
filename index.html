@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090812"><meta name="description" content="Discover movies and TV shows, manage your watchlist, and chat with VISION on REELORA.">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/styles.css">
+<title>REELORA | Your entertainment universe</title>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+window.OneSignalDeferred=window.OneSignalDeferred||[];
+OneSignalDeferred.push(async function(OneSignal){
+  await OneSignal.init({appId:"3df98de5-d865-4d92-b379-13fb5fe8f7ef",serviceWorkerPath:"/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/"}});
+});
+</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="#home"><span class="brand-icon">R</span> REELORA</a>
+<div class="side-label">YOUR SPACE</div>
+<nav>
+<a class="nav active" href="#home">⌂ <span>Home</span></a>
+<a class="nav" href="#discover">⌕ <span>Discover</span></a>
+<a class="nav" href="#watchlist">♡ <span>Watchlist</span></a>
+<a class="nav" href="#vision">✧ <span>VISION AI</span></a>
+</nav>
+<div class="side-bottom"><span class="pulse"></span><div><b>VISION</b><small>Your entertainment guide</small></div></div>
+</aside>
+<main class="main" id="home">
+<header class="topbar"><div><div class="kicker">YOUR ENTERTAINMENT UNIVERSE</div><h1>Stories worth waiting for.</h1></div>
+<div class="account"><span id="userLabel">Not signed in</span><button class="ghost" id="authOpen">Sign in</button></div></header>
+<section class="hero">
+<div class="hero-copy"><span class="tag">WELCOME TO REELORA</span><h2>Your next<br><em>great watch</em><br>starts here.</h2>
+<p>Discover stories, build your watchlist, and keep the next premiere on your radar.</p><a class="cta" href="#discover">Explore titles <b>↗</b></a></div>
+<div class="hero-art"><div class="halo"></div><div class="poster-shape p1"></div><div class="poster-shape p2"></div><div class="poster-shape p3"></div><div class="art-caption">A UNIVERSE OF STORIES</div></div>
+</section>
+<section class="section" id="discover"><div class="section-head"><div><div class="kicker">FIND YOUR NEXT FAVOURITE</div><h2>Discover</h2></div><span class="subtle">Movies & series</span></div>
+<div class="search"><span>⌕</span><input id="searchInput" placeholder="Search movies and TV shows..." autocomplete="off"><button id="searchBtn">Search</button></div><div id="searchStatus" class="status">Search titles from the entertainment catalogue.</div><div id="results" class="grid"></div></section>
+<section class="section" id="watchlist"><div class="section-head"><div><div class="kicker">SAVED FOR LATER</div><h2>My watchlist</h2></div><span class="subtle" id="watchCount">Sign in to sync across devices</span></div><div id="watchlistItems" class="grid"><div class="empty">Your saved titles will appear here after you sign in.</div></div></section>
+<section class="vision-banner" id="vision"><div class="vision-badge">V</div><div><div class="kicker">YOUR ENTERTAINMENT INTELLIGENCE</div><h2>Have a question? Ask VISION.</h2><p>Get recommendations, compare stories, and explore your favourite fictional worlds.</p></div><button class="cta" id="openVision">Chat with VISION ↗</button></section>
+<footer>REELORA <span>•</span> Your stories, in one place.</footer>
+</main></div>
+
+<button class="float-vision" id="floatVision" aria-label="Open VISION assistant"><span>V</span><small>Ask VISION</small></button>
+<div class="chat-panel" id="chatPanel" aria-label="VISION assistant">
+<div class="chat-head"><div class="vision-mini"><span class="vision-badge small">V</span><div><b>VISION</b><small>REELORA intelligence</small></div></div><button class="icon-btn" id="closeVision" aria-label="Close">×</button></div>
+<div class="chat-messages" id="chatMessages"><div class="bubble assistant">I'm VISION. Looking for your next favourite, comparing two series, or investigating a plot? Let's get into it. ✨</div></div>
+<div class="chat-compose"><textarea id="visionInput" rows="1" placeholder="Ask VISION anything about entertainment..."></textarea><button id="sendVision">↑</button></div><div class="chat-foot">VISION can make mistakes. Verify time-sensitive release details.</div>
+</div>
+
+<div class="modal hidden" id="authModal"><div class="modal-card"><button class="icon-btn modal-close" id="authClose">×</button><div class="kicker">YOUR REELORA ACCOUNT</div><h2>Welcome back.</h2><p class="subtle">Sign in to sync your watchlist across devices.</p>
+<input id="email" type="email" placeholder="Email address"><input id="password" type="password" placeholder="Password">
+<div class="auth-actions"><button class="cta full" id="loginBtn">Sign in</button><button class="ghost full" id="registerBtn">Create account</button><button class="google full" id="googleBtn">Continue with Google</button></div><div id="authStatus" class="status"></div></div></div>
+<script type="module" src="/app.js"></script>
+</body></html>
