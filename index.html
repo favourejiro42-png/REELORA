@@ -23,6 +23,7 @@ window.oneSignalReady = new Promise(resolve => {
 <div class="side-label">YOUR SPACE</div>
 <nav>
 <a class="nav active" href="#home">⌂ <span>Home</span></a>
+<a class="nav" href="#comingSoon">✦ <span>Coming Soon</span></a>
 <a class="nav" href="#discover">⌕ <span>Discover</span></a>
 <a class="nav" href="#watchlist">♡ <span>Watchlist</span></a>
 <a class="nav" href="#vision">✧ <span>VISION AI</span></a>
@@ -37,6 +38,14 @@ window.oneSignalReady = new Promise(resolve => {
 <p>Discover stories, build your watchlist, and keep the next premiere on your radar.</p><a class="cta" href="#discover">Explore titles <b>↗</b></a></div>
 <div class="hero-art"><div class="halo"></div><div class="poster-shape p1"></div><div class="poster-shape p2"></div><div class="poster-shape p3"></div><div class="art-caption">A UNIVERSE OF STORIES</div></div>
 </section>
+<section class="section coming-soon-section" id="comingSoon">
+<div class="coming-hero"><div><span class="coming-eyebrow">THE FUTURE OF ENTERTAINMENT</span><h2>Coming <em>Soon.</em></h2><p>Your next obsession hasn't premiered yet. Explore the movies and series on the horizon, then save the ones you can't wait to watch.</p><div class="coming-stats"><span><b>01</b> Discover</span><span><b>02</b> Save</span><span><b>03</b> Get reminded</span></div></div><div class="coming-orbit" aria-hidden="true"><div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div><div class="orbit-core">✦</div><span class="orbit-star star-one">✧</span><span class="orbit-star star-two">✦</span></div></div>
+<div class="section-head coming-heading"><div><div class="kicker">THE RELEASE RADAR</div><h2>Explore upcoming titles</h2></div><span class="subtle">Fresh picks from the catalogue</span></div>
+<div class="coming-controls"><div class="coming-tabs" role="tablist" aria-label="Upcoming media type"><button class="coming-tab active" data-media="movie" type="button">🎬 Movies</button><button class="coming-tab" data-media="tv" type="button">📺 Series</button></div><label class="genre-select-wrap"><span>GENRE</span><select id="comingGenre"><option value="">All genres</option></select></label></div>
+<div id="comingStatus" class="status">Loading upcoming movies…</div><div id="comingResults" class="grid coming-grid"></div>
+<div class="coming-more-wrap"><button id="comingMore" class="ghost" type="button" hidden>Load more titles ↓</button></div>
+<p class="coming-note">Release dates and title information are supplied by TMDB and may change. Availability depends on your region.</p>
+</section>
 <section class="section" id="discover"><div class="section-head"><div><div class="kicker">FIND YOUR NEXT FAVOURITE</div><h2>Discover</h2></div><span class="subtle">Movies & series</span></div>
 <div class="search"><span>⌕</span><input id="searchInput" placeholder="Search movies and TV shows..." autocomplete="off"><button id="searchBtn">Search</button></div><div id="searchStatus" class="status">Search titles from the entertainment catalogue.</div><div id="results" class="grid"></div></section>
 <section class="section" id="watchlist"><div class="section-head"><div><div class="kicker">SAVED FOR LATER</div><h2>My watchlist</h2></div><span class="subtle" id="watchCount">Sign in to sync across devices</span></div><div class="release-alert-card"><div><b>Release alerts</b><small id="alertStatus">Get notified about premieres and new episodes in your watchlist.</small></div><button class="cta" id="enableAlerts">Enable alerts</button></div><div id="watchlistItems" class="grid"><div class="empty">Your saved titles will appear here after you sign in.</div></div></section>
@@ -46,9 +55,9 @@ window.oneSignalReady = new Promise(resolve => {
 
 <button class="float-vision" id="floatVision" aria-label="Open VISION assistant"><img src="/vision-avatar.png" alt=""><small>Ask VISION</small></button>
 <div class="chat-panel" id="chatPanel" aria-label="VISION assistant">
-<div class="chat-head"><div class="vision-mini"><img class="vision-avatar chat-avatar" src="/vision-avatar.png" alt="VISION AI avatar"><div><b>VISION</b><small>REELORA intelligence</small></div></div><button class="icon-btn" id="closeVision" aria-label="Close">×</button></div>
-<div class="chat-messages" id="chatMessages"><div class="bubble assistant">I'm VISION. Looking for your next favourite, comparing two series, or investigating a plot? Let's get into it. ✨</div></div>
-<div class="chat-compose"><textarea id="visionInput" rows="1" placeholder="Ask VISION anything about entertainment..."></textarea><button id="sendVision">↑</button></div><div class="chat-foot">VISION can make mistakes. Verify time-sensitive release details.</div>
+<div class="chat-head"><div class="vision-mini"><img class="vision-avatar chat-avatar" src="/vision-avatar.png" alt="VISION AI avatar"><div><b>VISION</b><small>Synthezoid intelligence · curious by design</small></div></div><button class="icon-btn chat-back" id="closeVision" aria-label="Back to REELORA">← <span>Back</span></button></div>
+<div class="chat-messages" id="chatMessages"><div class="bubble assistant">I'm VISION. Entertainment, unanswered questions, the occasional philosophical detour. Where shall we begin?</div></div>
+<div class="chat-compose"><button class="voice-tool" id="visionMic" type="button" aria-label="Speak to VISION">🎤</button><textarea id="visionInput" rows="1" placeholder="Talk to VISION or type a message..."></textarea><button id="sendVision" aria-label="Send message">↑</button></div><div class="voice-toolbar"><span>VISION signature voice · Daniel</span><button id="stopVisionAudio" type="button">■ Stop voice</button></div><div class="chat-foot">VISION can make mistakes. Verify time-sensitive release details.</div>
 </div>
 
 <div class="detail-modal hidden" id="detailModal" role="dialog" aria-modal="true" aria-label="Title details">

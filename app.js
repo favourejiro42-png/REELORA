@@ -16,7 +16,7 @@ setPersistence(auth, browserLocalPersistence).catch(console.error);
 const $ = id => document.getElementById(id);
 let currentUser = null, stopWatchlist = null;
 let chatHistory = [];
-let countdownTimer = null;
+let countdownTimer = null, episodeCountdownTimer = null;
 
 function authStatus(message){ $("authStatus").textContent = message; }
 function showAuth(){ $("authModal").classList.remove("hidden"); }
@@ -60,6 +60,7 @@ function titleCard(item, saved=false) {
 
 function closeDetails(){
   if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+  if(episodeCountdownTimer){clearInterval(episodeCountdownTimer);episodeCountdownTimer=null;}
   $("detailModal").classList.add("hidden");
   document.body.classList.remove("detail-open");
 }
@@ -74,8 +75,27 @@ function detailLine(label,value){
   const text=document.createElement("span");text.textContent=value;
   line.append(strong,text);return line;
 }
+function updateEpisodeCountdowns(){
+  const clocks=document.querySelectorAll(".episode-countdown[data-episode-target]");
+  let active=0;
+  clocks.forEach(clock=>{
+    const target=Number(clock.dataset.episodeTarget);
+    const remaining=target-Date.now();
+    if(!Number.isFinite(target))return;
+    if(remaining<=0){clock.textContent="Premiere day reached";clock.classList.add("episode-countdown-now");return;}
+    active++;
+    const days=Math.floor(remaining/86400000);
+    const hours=Math.floor((remaining%86400000)/3600000);
+    const minutes=Math.floor((remaining%3600000)/60000);
+    const seconds=Math.floor((remaining%60000)/1000);
+    clock.textContent=`${days}d ${String(hours).padStart(2,"0")}h ${String(minutes).padStart(2,"0")}m ${String(seconds).padStart(2,"0")}s until release`;
+  });
+  if(!active&&episodeCountdownTimer){clearInterval(episodeCountdownTimer);episodeCountdownTimer=null;}
+}
+
 async function openDetails(item){
   if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+  if(episodeCountdownTimer){clearInterval(episodeCountdownTimer);episodeCountdownTimer=null;}
   const modal=$("detailModal"), content=$("detailContent");
   modal.classList.remove("hidden");document.body.classList.add("detail-open");
   content.replaceChildren();
@@ -184,9 +204,28 @@ async function openDetails(item){
               const episodeDate=document.createElement("small");episodeDate.textContent=episode.air_date?`Air date: ${episode.air_date}`:"Air date not announced";
               const episodeOverview=document.createElement("p");episodeOverview.textContent=episode.overview||"Episode description not available yet.";
               const episodeState=document.createElement("span");episodeState.className="episode-state";
-              if(episode.air_date){const airTime=new Date(`${episode.air_date}T00:00:00`).getTime();episodeState.textContent=airTime>Date.now()?"UPCOMING":"RELEASED";episodeState.classList.add(airTime>Date.now()?"upcoming":"released");}
-              episodeCopy.append(episodeTitle,episodeDate,episodeOverview);if(episodeState.textContent)episodeCopy.append(episodeState);row.append(episodeCopy);episodeArea.append(row);
+              let episodeCountdown=null;
+              if(episode.air_date){
+                const airTime=new Date(`${episode.air_date}T00:00:00`).getTime();
+                const upcoming=Number.isFinite(airTime)&&airTime>Date.now();
+                episodeState.textContent=upcoming?"UPCOMING":"RELEASED";
+                episodeState.classList.add(upcoming?"upcoming":"released");
+                if(upcoming){
+                  episodeCountdown=document.createElement("div");
+                  episodeCountdown.className="episode-countdown";
+                  episodeCountdown.dataset.episodeTarget=String(airTime);
+                  episodeCountdown.setAttribute("aria-label",`Countdown to episode release on ${episode.air_date}`);
+                }
+              }
+              episodeCopy.append(episodeTitle,episodeDate,episodeOverview);
+              if(episodeState.textContent)episodeCopy.append(episodeState);
+              if(episodeCountdown)episodeCopy.append(episodeCountdown);
+              row.append(episodeCopy);episodeArea.append(row);
             });
+            updateEpisodeCountdowns();
+            if(!episodeCountdownTimer && document.querySelector(".episode-countdown[data-episode-target]")){
+              episodeCountdownTimer=setInterval(updateEpisodeCountdowns,1000);
+            }
             loaded=true;
           }catch(err){episodeArea.replaceChildren();const error=document.createElement("p");error.className="episode-status";error.textContent=err.message;episodeArea.append(error);}
           finally{loading=false;}
@@ -212,6 +251,74 @@ async function openDetails(item){
     content.append(message,retry);
   }
 }
+
+// COMING SOON discovery hub: upcoming movies and series, filterable by genre.
+const comingState = { media: "movie", genre: "", page: 1, totalPages: 1, busy: false, genres: { movie: [], tv: [] } };
+const comingGenreFallback = [
+  { id: 28, name: "Action" }, { id: 12, name: "Adventure" }, { id: 16, name: "Animation" },
+  { id: 35, name: "Comedy" }, { id: 80, name: "Crime" }, { id: 99, name: "Documentary" },
+  { id: 18, name: "Drama" }, { id: 10751, name: "Family" }, { id: 14, name: "Fantasy" },
+  { id: 27, name: "Horror" }, { id: 9648, name: "Mystery" }, { id: 10749, name: "Romance" },
+  { id: 878, name: "Science Fiction" }, { id: 53, name: "Thriller" }, { id: 10752, name: "War" }
+];
+async function loadComingGenres(media) {
+  const select = $("comingGenre");
+  select.replaceChildren();
+  const all = document.createElement("option"); all.value = ""; all.textContent = "All genres"; select.append(all);
+  let genres = comingState.genres[media];
+  if (!genres.length) {
+    try {
+      const response = await fetch(`/api/tmdb?action=genres&media=${media}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load genres.");
+      genres = data.genres || [];
+      comingState.genres[media] = genres;
+    } catch (error) {
+      // The common genre list keeps the discovery panel usable if genre lookup is temporarily unavailable.
+      genres = comingGenreFallback;
+    }
+  }
+  genres.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(genre=>{
+    const option=document.createElement("option");option.value=String(genre.id);option.textContent=genre.name;select.append(option);
+  });
+  select.value = comingState.genre;
+}
+async function loadComingSoon(reset=true) {
+  if (comingState.busy) return;
+  if (reset) { comingState.page=1; $("comingResults").replaceChildren(); }
+  comingState.busy=true;
+  const status=$("comingStatus"), more=$("comingMore");
+  status.textContent=reset?`Finding upcoming ${comingState.media === "movie" ? "movies" : "series"}…`:"Loading more titles…";
+  more.disabled=true;
+  try {
+    const params=new URLSearchParams({action:"discover",media:comingState.media,page:String(comingState.page)});
+    if(comingState.genre)params.set("genre",comingState.genre);
+    const response=await fetch(`/api/tmdb?${params}`),data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Could not load upcoming titles.");
+    const results=(data.results||[]).filter(item=>item.release_date && item.release_date >= new Date().toISOString().slice(0,10));
+    if(reset && !results.length){status.textContent="No upcoming titles found for this filter yet. Try another genre.";}
+    else if(reset){status.textContent=`${comingState.media === "movie" ? "Upcoming movies" : "Upcoming series"} selected for you`;} 
+    results.forEach(item=>$("comingResults").append(titleCard(item)));
+    comingState.totalPages=Math.min(data.total_pages||1,10);
+    more.hidden=comingState.page>=comingState.totalPages || results.length===0;
+    if(!reset && !results.length)status.textContent="No more titles in this selection.";
+  } catch(error) {
+    status.textContent=error.message;
+    more.hidden=true;
+  } finally { comingState.busy=false;more.disabled=false; }
+}
+function setupComingSoon(){
+  document.querySelectorAll(".coming-tab").forEach(button=>button.addEventListener("click",async()=>{
+    if(button.dataset.media===comingState.media)return;
+    comingState.media=button.dataset.media;comingState.genre="";
+    document.querySelectorAll(".coming-tab").forEach(tab=>tab.classList.toggle("active",tab===button));
+    await loadComingGenres(comingState.media);await loadComingSoon(true);
+  }));
+  $("comingGenre").addEventListener("change",()=>{comingState.genre=$("comingGenre").value;loadComingSoon(true);});
+  $("comingMore").addEventListener("click",()=>{if(comingState.page<comingState.totalPages){comingState.page++;loadComingSoon(false);}});
+  loadComingGenres("movie").then(()=>loadComingSoon(true));
+}
+setupComingSoon();
 
 async function searchTitles(){
   const term=$("searchInput").value.trim();if(!term){$("searchStatus").textContent="Enter a title to search.";return;}
@@ -252,21 +359,18 @@ async function enableReleaseAlerts(){
   finally{button.disabled=false;}
 }
 $("enableAlerts").onclick=enableReleaseAlerts;
-function openChat(){$("chatPanel").classList.add("open");$("visionInput").focus();}
-function closeChat(){$("chatPanel").classList.remove("open");}
+function openChat(){$("chatPanel").classList.add("open");document.body.classList.add("vision-chat-open");setTimeout(()=>$ ("visionInput").focus(),80);}
+function closeChat(){$("chatPanel").classList.remove("open");document.body.classList.remove("vision-chat-open");stopVisionAudio();if(recognition)recognition.stop();}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("chatPanel").classList.contains("open"))closeChat();});
 $("floatVision").onclick=openChat;$("openVision").onclick=openChat;$("closeVision").onclick=closeChat;
-function addBubble(role,text){const b=document.createElement("div");b.className=`bubble ${role}`;b.textContent=text;$("chatMessages").append(b);$("chatMessages").scrollTop=$("chatMessages").scrollHeight;return b;}
-async function sendVision(){
-  const input=$("visionInput"), text=input.value.trim();if(!text)return;
-  input.value="";addBubble("user",text);chatHistory.push({role:"user",content:text});
-  const pending=addBubble("assistant","VISION is thinking…");$("sendVision").disabled=true;
-  try{
-    const r=await fetch("/api/vision",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:chatHistory})});
-    const data=await r.json();if(!r.ok)throw new Error(data.error||"VISION is unavailable.");
-    pending.textContent=data.reply;chatHistory.push({role:"assistant",content:data.reply});
-    if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);
-  }catch(e){pending.textContent=e.message;chatHistory.pop();}
-  finally{$("sendVision").disabled=false;}
-}
+let activeAudio=null, audioUrls=[], recognition=null, isListening=false, speechRunId=0;
+function stopVisionAudio(){speechRunId++;if(activeAudio){activeAudio.pause();activeAudio=null;}audioUrls.forEach(URL.revokeObjectURL);audioUrls=[];document.querySelectorAll(".listen-vision").forEach(b=>{b.disabled=false;b.textContent="▶ Listen";});}
+function addBubble(role,text){const b=document.createElement("div");b.className=`bubble ${role}`;const body=document.createElement("div");body.className="bubble-text";body.textContent=text;b.append(body);if(role==="assistant"&&!/^VISION is thinking/.test(text)){const controls=document.createElement("div");controls.className="bubble-controls";const listen=document.createElement("button");listen.className="listen-vision";listen.type="button";listen.textContent="▶ Listen";listen.onclick=()=>speakVision(text,listen);controls.append(listen);b.append(controls);}$("chatMessages").append(b);$("chatMessages").scrollTop=$("chatMessages").scrollHeight;return b;}
+function splitForSpeech(text,max=190){const words=text.replace(/\s+/g," ").trim().split(" "),parts=[];let part="";for(const word of words){if((part+" "+word).trim().length>max){if(part)parts.push(part);part=word;}else part=(part+" "+word).trim();}if(part)parts.push(part);return parts;}
+async function speakVision(text,button){stopVisionAudio();const runId=speechRunId;button.disabled=true;button.textContent="Generating voice…";const chunks=splitForSpeech(text);try{for(const chunk of chunks){if(runId!==speechRunId)break;const r=await fetch("/api/vision-speech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:chunk})});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"Voice generation failed.");}const blob=await r.blob(),url=URL.createObjectURL(blob);audioUrls.push(url);if(runId!==speechRunId)break;await new Promise((resolve,reject)=>{const audio=new Audio(url);activeAudio=audio;audio.onended=resolve;audio.onpause=resolve;audio.onerror=()=>reject(new Error("Audio playback failed."));audio.play().catch(reject);});}if(runId===speechRunId)button.textContent="▶ Listen";}catch(e){if(runId===speechRunId){button.textContent="Voice unavailable";console.error(e);}}finally{if(runId===speechRunId){activeAudio=null;button.disabled=false;}}}
+async function sendVision(){const input=$("visionInput"),text=input.value.trim();if(!text)return;stopVisionAudio();input.value="";addBubble("user",text);chatHistory.push({role:"user",content:text});const pending=addBubble("assistant","VISION is thinking…");$("sendVision").disabled=true;try{const r=await fetch("/api/vision",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:chatHistory})});const data=await r.json();if(!r.ok)throw new Error(data.error||"VISION is unavailable.");pending.querySelector(".bubble-text").textContent=data.reply;const controls=document.createElement("div");controls.className="bubble-controls";const listen=document.createElement("button");listen.className="listen-vision";listen.type="button";listen.textContent="▶ Listen";listen.onclick=()=>speakVision(data.reply,listen);controls.append(listen);pending.append(controls);chatHistory.push({role:"assistant",content:data.reply});if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);}catch(e){pending.querySelector(".bubble-text").textContent=e.message;chatHistory.pop();}finally{$("sendVision").disabled=false;}}
 $("sendVision").onclick=sendVision;
 $("visionInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendVision();}});
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SpeechRecognition){recognition=new SpeechRecognition();recognition.lang="en-NG";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{isListening=true;$("visionMic").classList.add("listening");$("visionMic").textContent="●";};recognition.onresult=e=>{let finalText="",interim="";for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finalText+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}$("visionInput").value=(finalText||interim).trim();};recognition.onerror=()=>{isListening=false;$("visionMic").classList.remove("listening");$("visionMic").textContent="🎤";};recognition.onend=()=>{isListening=false;$("visionMic").classList.remove("listening");$("visionMic").textContent="🎤";};$("visionMic").onclick=()=>{if(isListening)recognition.stop();else{try{recognition.start();}catch(e){console.warn(e);}}};}else{$("visionMic").onclick=()=>{addBubble("assistant","Voice input isn't supported by this browser. You can still type to me, and I'll speak replies aloud.");};}
+$("stopVisionAudio").onclick=stopVisionAudio;

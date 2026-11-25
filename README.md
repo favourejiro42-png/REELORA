@@ -73,3 +73,18 @@ Selecting a movie or TV poster/title opens a detail view powered by TMDB. It dis
 
 ## Premiere countdown
 The title details modal now shows a live days/hours/minutes/seconds countdown when TMDB provides a future movie release date or TV series first-air date. Once that date is reached, it changes to “Already premiered”. The countdown uses the device's local time zone and counts to the start of the listed release date; TMDB does not provide a precise premiere time through this endpoint.
+
+
+## VISION 3.0 voice and personality
+
+VISION now uses a consistent synthezoid persona and can generate spoken replies through Groq Orpheus TTS. The fixed signature voice is `daniel` (`canopylabs/orpheus-v1-english`). The existing `GROQ_API_KEY` environment variable is reused; no additional secret is required. Replies are split into short speech requests to respect Groq's 200-character input limit. The microphone uses the browser's built-in SpeechRecognition API where supported; microphone availability and permission prompts depend on the browser/device. Speech generation incurs Groq usage.
+
+
+### TV episode countdowns
+Upcoming episodes now display an individual live countdown in the season episode list. The countdown uses the air date returned by TMDB and counts to the start of that date in the visitor's local timezone. TMDB generally supplies a date rather than an exact premiere time, so the timer should not be interpreted as an exact release-hour guarantee. This display works for any TV series with upcoming episode air dates available from TMDB.
+
+## Coming Soon discovery hub
+
+The homepage now includes a Coming Soon section for upcoming movies and TV series. Visitors can switch between Movies and Series, filter by TMDB genre, open title details, add titles to their Firebase watchlist, and load more results. Discovery uses TMDB's `/discover/movie` and `/discover/tv` endpoints through `api/tmdb.js`; genre options are loaded from TMDB's genre-list endpoints. The movie feed is region-aware for Nigeria (`region=NG`), while the TV feed uses TMDB's upcoming first-air dates. The feed currently looks up titles scheduled within the next 365 days and limits pagination to the first 10 pages to keep requests bounded.
+
+Release dates and catalogue availability are supplied by TMDB and may change. A listing in Coming Soon does not guarantee that a title will be available to stream in Nigeria. TMDB API attribution is displayed in title details.
