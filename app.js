@@ -367,7 +367,74 @@ let activeAudio=null, audioUrls=[], recognition=null, isListening=false, speechR
 function stopVisionAudio(){speechRunId++;if(activeAudio){activeAudio.pause();activeAudio=null;}audioUrls.forEach(URL.revokeObjectURL);audioUrls=[];document.querySelectorAll(".listen-vision").forEach(b=>{b.disabled=false;b.textContent="▶ Listen";});}
 function addBubble(role,text){const b=document.createElement("div");b.className=`bubble ${role}`;const body=document.createElement("div");body.className="bubble-text";body.textContent=text;b.append(body);if(role==="assistant"&&!/^VISION is thinking/.test(text)){const controls=document.createElement("div");controls.className="bubble-controls";const listen=document.createElement("button");listen.className="listen-vision";listen.type="button";listen.textContent="▶ Listen";listen.onclick=()=>speakVision(text,listen);controls.append(listen);b.append(controls);}$("chatMessages").append(b);$("chatMessages").scrollTop=$("chatMessages").scrollHeight;return b;}
 function splitForSpeech(text,max=190){const words=text.replace(/\s+/g," ").trim().split(" "),parts=[];let part="";for(const word of words){if((part+" "+word).trim().length>max){if(part)parts.push(part);part=word;}else part=(part+" "+word).trim();}if(part)parts.push(part);return parts;}
-async function speakVision(text,button){stopVisionAudio();const runId=speechRunId;button.disabled=true;button.textContent="Generating voice…";const chunks=splitForSpeech(text);try{for(const chunk of chunks){if(runId!==speechRunId)break;const r=await fetch("/api/vision-speech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:chunk})});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"Voice generation failed.");}const blob=await r.blob(),url=URL.createObjectURL(blob);audioUrls.push(url);if(runId!==speechRunId)break;await new Promise((resolve,reject)=>{const audio=new Audio(url);activeAudio=audio;audio.onended=resolve;audio.onpause=resolve;audio.onerror=()=>reject(new Error("Audio playback failed."));audio.play().catch(reject);});}if(runId===speechRunId)button.textContent="▶ Listen";}catch(e){if(runId===speechRunId){button.textContent="Voice unavailable";console.error(e);}}finally{if(runId===speechRunId){activeAudio=null;button.disabled=false;}}}
+async function speakVision(text, button) {
+  stopVisionAudio();
+
+  const runId = speechRunId;
+  button.disabled = true;
+  button.textContent = "Generating voice…";
+
+  const previousError = button.parentElement.querySelector(".voice-error");
+  if (previousError) previousError.remove();
+
+  const chunks = splitForSpeech(text);
+
+  try {
+    for (const chunk of chunks) {
+      if (runId !== speechRunId) break;
+
+      const response = await fetch("/api/vision-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: chunk })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Voice request failed (${response.status}).`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      audioUrls.push(url);
+
+      if (runId !== speechRunId) break;
+
+      await new Promise((resolve, reject) => {
+        const audio = new Audio(url);
+        activeAudio = audio;
+
+        audio.onended = resolve;
+        audio.onpause = resolve;
+        audio.onerror = () => reject(new Error("Audio playback failed."));
+
+        audio.play().catch(reject);
+      });
+    }
+
+    if (runId === speechRunId) {
+      button.textContent = "▶ Listen";
+    }
+
+  } catch (error) {
+    if (runId === speechRunId) {
+      button.textContent = "Retry voice";
+      console.error("VISION voice error:", error);
+
+      const status = document.createElement("small");
+      status.className = "voice-error";
+      status.textContent = error.message || "Voice playback failed.";
+
+      button.insertAdjacentElement("afterend", status);
+    }
+
+  } finally {
+    if (runId === speechRunId) {
+      activeAudio = null;
+      button.disabled = false;
+    }
+  }
+}
 async function sendVision(){const input=$("visionInput"),text=input.value.trim();if(!text)return;stopVisionAudio();input.value="";addBubble("user",text);chatHistory.push({role:"user",content:text});const pending=addBubble("assistant","VISION is thinking…");$("sendVision").disabled=true;try{const r=await fetch("/api/vision",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:chatHistory})});const data=await r.json();if(!r.ok)throw new Error(data.error||"VISION is unavailable.");pending.querySelector(".bubble-text").textContent=data.reply;const controls=document.createElement("div");controls.className="bubble-controls";const listen=document.createElement("button");listen.className="listen-vision";listen.type="button";listen.textContent="▶ Listen";listen.onclick=()=>speakVision(data.reply,listen);controls.append(listen);pending.append(controls);chatHistory.push({role:"assistant",content:data.reply});if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);}catch(e){pending.querySelector(".bubble-text").textContent=e.message;chatHistory.pop();}finally{$("sendVision").disabled=false;}}
 $("sendVision").onclick=sendVision;
 $("visionInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendVision();}});
