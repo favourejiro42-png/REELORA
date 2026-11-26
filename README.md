@@ -82,9 +82,3 @@ VISION now uses a consistent synthezoid persona and can generate spoken replies 
 
 ### TV episode countdowns
 Upcoming episodes now display an individual live countdown in the season episode list. The countdown uses the air date returned by TMDB and counts to the start of that date in the visitor's local timezone. TMDB generally supplies a date rather than an exact premiere time, so the timer should not be interpreted as an exact release-hour guarantee. This display works for any TV series with upcoming episode air dates available from TMDB.
-
-## Coming Soon discovery hub
-
-The homepage now includes a Coming Soon section for upcoming movies and TV series. Visitors can switch between Movies and Series, filter by TMDB genre, open title details, add titles to their Firebase watchlist, and load more results. Discovery uses TMDB's `/discover/movie` and `/discover/tv` endpoints through `api/tmdb.js`; genre options are loaded from TMDB's genre-list endpoints. The movie feed is region-aware for Nigeria (`region=NG`), while the TV feed uses TMDB's upcoming first-air dates. The feed currently looks up titles scheduled within the next 365 days and limits pagination to the first 10 pages to keep requests bounded.
-
-Release dates and catalogue availability are supplied by TMDB and may change. A listing in Coming Soon does not guarantee that a title will be available to stream in Nigeria. TMDB API attribution is displayed in title details.
