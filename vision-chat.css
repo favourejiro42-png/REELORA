@@ -1,5 +1,6 @@
 /* VISION chat polish layer. Loaded after styles.css so it only refines the assistant UI. */
-.chat-panel{display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain}
+.chat-panel{display:none;flex-direction:column;overflow:hidden;overscroll-behavior:contain}
+.chat-panel.open{display:flex}
 .chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .chat-head-actions{display:flex;align-items:center;gap:8px}
 .chat-messages{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;padding:18px 16px 24px;scrollbar-width:thin}
