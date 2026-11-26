@@ -2,7 +2,7 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const CREATOR_EMAIL = 'artdark962@gmail.com';
+const CREATOR_EMAIL = 'favourejiro42@gmail.com';
 function adminServices(){
   if(!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not configured.');
   const serviceAccount=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
