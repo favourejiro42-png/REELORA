@@ -23,6 +23,7 @@ window.oneSignalReady = new Promise(resolve => {
 <div class="side-label">YOUR SPACE</div>
 <nav>
 <a class="nav active" href="#home">⌂ <span>Home</span></a>
+<a class="nav" href="#comingSoon">✦ <span>Coming Soon</span></a>
 <a class="nav" href="#discover">⌕ <span>Discover</span></a>
 <a class="nav" href="#watchlist">♡ <span>Watchlist</span></a>
 <a class="nav" href="#vision">✧ <span>VISION AI</span></a>
@@ -36,6 +37,14 @@ window.oneSignalReady = new Promise(resolve => {
 <div class="hero-copy"><span class="tag">WELCOME TO REELORA</span><h2>Your next<br><em>great watch</em><br>starts here.</h2>
 <p>Discover stories, build your watchlist, and keep the next premiere on your radar.</p><a class="cta" href="#discover">Explore titles <b>↗</b></a></div>
 <div class="hero-art"><div class="halo"></div><div class="poster-shape p1"></div><div class="poster-shape p2"></div><div class="poster-shape p3"></div><div class="art-caption">A UNIVERSE OF STORIES</div></div>
+</section>
+<section class="section coming-soon-section" id="comingSoon">
+<div class="coming-hero"><div><span class="coming-eyebrow">THE FUTURE OF ENTERTAINMENT</span><h2>Coming <em>Soon.</em></h2><p>Your next obsession hasn't premiered yet. Explore the movies and series on the horizon, then save the ones you can't wait to watch.</p><div class="coming-stats"><span><b>01</b> Discover</span><span><b>02</b> Save</span><span><b>03</b> Get reminded</span></div></div><div class="coming-orbit" aria-hidden="true"><div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div><div class="orbit-core">✦</div><span class="orbit-star star-one">✧</span><span class="orbit-star star-two">✦</span></div></div>
+<div class="section-head coming-heading"><div><div class="kicker">THE RELEASE RADAR</div><h2>Explore upcoming titles</h2></div><span class="subtle">Fresh picks from the catalogue</span></div>
+<div class="coming-controls"><div class="coming-tabs" role="tablist" aria-label="Upcoming media type"><button class="coming-tab active" data-media="movie" type="button">🎬 Movies</button><button class="coming-tab" data-media="tv" type="button">📺 Series</button></div><label class="genre-select-wrap"><span>GENRE</span><select id="comingGenre"><option value="">All genres</option></select></label></div>
+<div id="comingStatus" class="status">Loading upcoming movies…</div><div id="comingResults" class="grid coming-grid"></div>
+<div class="coming-more-wrap"><button id="comingMore" class="ghost" type="button" hidden>Load more titles ↓</button></div>
+<p class="coming-note">Release dates and title information are supplied by TMDB and may change. Availability depends on your region.</p>
 </section>
 <section class="section" id="discover"><div class="section-head"><div><div class="kicker">FIND YOUR NEXT FAVOURITE</div><h2>Discover</h2></div><span class="subtle">Movies & series</span></div>
 <div class="search"><span>⌕</span><input id="searchInput" placeholder="Search movies and TV shows..." autocomplete="off"><button id="searchBtn">Search</button></div><div id="searchStatus" class="status">Search titles from the entertainment catalogue.</div><div id="results" class="grid"></div></section>
