@@ -1,0 +1,38 @@
+/* VISION chat polish layer. Loaded after styles.css so it only refines the assistant UI. */
+.chat-panel{display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain}
+.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chat-head-actions{display:flex;align-items:center;gap:8px}
+.chat-messages{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;padding:18px 16px 24px;scrollbar-width:thin}
+.chat-messages .bubble{max-width:min(88%,680px);position:relative;overflow-wrap:anywhere;animation:visionBubbleIn .18s ease-out}
+.chat-messages .bubble.user{margin-left:auto}
+.chat-messages .bubble-text{white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+.bubble-controls{display:flex;align-items:center;gap:7px;margin-top:10px;min-height:30px;opacity:.72;transition:opacity .18s}
+.bubble:hover .bubble-controls,.bubble:focus-within .bubble-controls{opacity:1}
+.chat-tool{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:34px;padding:5px 9px;border:1px solid rgba(190,160,255,.28);border-radius:11px;background:rgba(255,255,255,.045);color:inherit;font:inherit;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.chat-tool:hover{background:rgba(174,137,255,.16);border-color:rgba(190,160,255,.62)}
+.chat-tool:active{transform:scale(.96)}
+.chat-tool:disabled{opacity:.5;cursor:wait}
+.chat-tool.speaking{background:rgba(174,137,255,.2);border-color:#b99aff}
+.chat-tool.live-active{background:rgba(230,75,110,.18);border-color:#e96a8c;box-shadow:0 0 0 4px rgba(233,106,140,.1)}
+.chat-compose{display:flex;align-items:flex-end;gap:9px;padding:12px 14px}
+.chat-compose textarea{flex:1;min-width:0;max-height:140px;resize:none;line-height:1.45;overflow-y:auto}
+.chat-compose #sendVision{flex:0 0 48px;min-height:48px;border:0;border-radius:15px;cursor:pointer}
+.chat-compose .compose-mic{flex:0 0 42px;min-height:46px}
+.chat-compose .compose-mic.listening{background:rgba(230,75,110,.18);border-color:#e96a8c}
+.live-status{min-height:18px;padding:0 16px 5px;font-size:.78rem;opacity:.72}
+.chat-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.stop-voice{font-size:.78rem;min-height:30px}
+.voice-error{display:block;margin-top:7px;color:#ffb6c2;overflow-wrap:anywhere}
+.message-editor{display:block;width:100%;min-height:72px;resize:vertical;padding:10px;border:1px solid rgba(190,160,255,.45);border-radius:12px;background:rgba(10,8,20,.65);color:inherit;font:inherit}
+.edit-controls{display:flex;justify-content:flex-end;gap:8px;margin-top:9px}
+.chat-action{padding:8px 12px;border:1px solid rgba(190,160,255,.35);border-radius:10px;background:transparent;color:inherit;cursor:pointer}
+.chat-action.primary{background:#a98bea;color:#171020;border-color:transparent;font-weight:650}
+@keyframes visionBubbleIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:640px){
+ .chat-panel{width:100%;height:100dvh;max-height:100dvh;inset:0;border-radius:0}
+ .chat-messages{padding:14px 12px 20px}
+ .chat-messages .bubble{max-width:94%}
+ .chat-compose{padding:10px}
+ .chat-foot{font-size:.74rem;padding:7px 12px calc(8px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){.chat-messages{scroll-behavior:auto}.chat-messages .bubble{animation:none}}

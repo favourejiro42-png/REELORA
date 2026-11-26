@@ -359,85 +359,424 @@ async function enableReleaseAlerts(){
   finally{button.disabled=false;}
 }
 $("enableAlerts").onclick=enableReleaseAlerts;
-function openChat(){$("chatPanel").classList.add("open");document.body.classList.add("vision-chat-open");setTimeout(()=>$ ("visionInput").focus(),80);}
-function closeChat(){$("chatPanel").classList.remove("open");document.body.classList.remove("vision-chat-open");stopVisionAudio();if(recognition)recognition.stop();}
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("chatPanel").classList.contains("open"))closeChat();});
-$("floatVision").onclick=openChat;$("openVision").onclick=openChat;$("closeVision").onclick=closeChat;
-let activeAudio=null, audioUrls=[], recognition=null, isListening=false, speechRunId=0;
-function stopVisionAudio(){speechRunId++;if(activeAudio){activeAudio.pause();activeAudio=null;}audioUrls.forEach(URL.revokeObjectURL);audioUrls=[];document.querySelectorAll(".listen-vision").forEach(b=>{b.disabled=false;b.textContent="▶ Listen";});}
-function addBubble(role,text){const b=document.createElement("div");b.className=`bubble ${role}`;const body=document.createElement("div");body.className="bubble-text";body.textContent=text;b.append(body);if(role==="assistant"&&!/^VISION is thinking/.test(text)){const controls=document.createElement("div");controls.className="bubble-controls";const listen=document.createElement("button");listen.className="listen-vision";listen.type="button";listen.textContent="▶ Listen";listen.onclick=()=>speakVision(text,listen);controls.append(listen);b.append(controls);}$("chatMessages").append(b);$("chatMessages").scrollTop=$("chatMessages").scrollHeight;return b;}
-function splitForSpeech(text,max=190){const words=text.replace(/\s+/g," ").trim().split(" "),parts=[];let part="";for(const word of words){if((part+" "+word).trim().length>max){if(part)parts.push(part);part=word;}else part=(part+" "+word).trim();}if(part)parts.push(part);return parts;}
-async function speakVision(text, button) {
+function openChat() {
+  $("chatPanel").classList.add("open");
+  document.body.classList.add("vision-chat-open");
+  setTimeout(() => $("visionInput").focus(), 100);
+}
+function closeChat() {
+  $("chatPanel").classList.remove("open");
+  document.body.classList.remove("vision-chat-open");
   stopVisionAudio();
+  stopLiveTalk();
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && $("chatPanel").classList.contains("open")) closeChat();
+});
+$("floatVision").onclick = openChat;
+$("openVision").onclick = openChat;
+$("closeVision").onclick = closeChat;
 
+let activeAudio = null, audioUrls = [], recognition = null, isListening = false;
+let speechRunId = 0, liveTalkEnabled = false, liveRecognition = null;
+let lastAssistantBubble = null;
+
+function stopVisionAudio() {
+  speechRunId++;
+  if (activeAudio) { activeAudio.pause(); activeAudio = null; }
+  audioUrls.forEach(URL.revokeObjectURL);
+  audioUrls = [];
+  document.querySelectorAll(".listen-vision").forEach(b => {
+    b.disabled = false;
+    b.classList.remove("speaking");
+    b.setAttribute("aria-label", "Read VISION's reply aloud");
+  });
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+function scrollChat() {
+  const box = $("chatMessages");
+  requestAnimationFrame(() => { box.scrollTo({top: box.scrollHeight, behavior: "smooth"}); });
+}
+function copyText(text, button) {
+  const done = () => {
+    const old = button.innerHTML;
+    button.innerHTML = "✓";
+    button.setAttribute("aria-label", "Copied");
+    setTimeout(() => { button.innerHTML = old; button.setAttribute("aria-label", "Copy message"); }, 1300);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, button, done));
+  } else fallbackCopy(text, button, done);
+}
+function fallbackCopy(text, button, done) {
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.style.position = "fixed";
+  field.style.opacity = "0";
+  document.body.append(field);
+  field.select();
+  try { document.execCommand("copy"); done(); }
+  catch { button.setAttribute("aria-label", "Copy failed"); }
+  field.remove();
+}
+function addBubble(role, text, options = {}) {
+  const bubble = document.createElement("article");
+  bubble.className = `bubble ${role}`;
+  bubble.dataset.role = role;
+  const body = document.createElement("div");
+  body.className = "bubble-text";
+  body.textContent = text;
+  bubble.append(body);
+
+  if (role !== "system" && !options.pending) {
+    const controls = document.createElement("div");
+    controls.className = "bubble-controls";
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "chat-tool copy-message";
+    copy.innerHTML = "▢";
+    copy.title = "Copy full message";
+    copy.setAttribute("aria-label", "Copy message");
+    copy.onclick = () => copyText(body.textContent, copy);
+    controls.append(copy);
+
+    if (role === "assistant") {
+      const speak = document.createElement("button");
+      speak.type = "button";
+      speak.className = "chat-tool listen-vision";
+      speak.innerHTML = "🔊";
+      speak.title = "Read reply aloud";
+      speak.setAttribute("aria-label", "Read VISION's reply aloud");
+      speak.onclick = () => speakVision(body.textContent, speak);
+      controls.append(speak);
+      const regenerate = document.createElement("button");
+      regenerate.type = "button";
+      regenerate.className = "chat-tool regenerate-message";
+      regenerate.innerHTML = "↻";
+      regenerate.title = "Regenerate reply";
+      regenerate.setAttribute("aria-label", "Regenerate reply");
+      regenerate.onclick = () => regenerateAssistantReply(bubble);
+      controls.append(regenerate);
+    } else if (role === "user") {
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "chat-tool edit-message";
+      edit.innerHTML = "✎";
+      edit.title = "Edit message";
+      edit.setAttribute("aria-label", "Edit message");
+      edit.onclick = () => editUserMessage(bubble);
+      controls.append(edit);
+    }
+    bubble.append(controls);
+  }
+  $("chatMessages").append(bubble);
+  scrollChat();
+  if (role === "assistant" && !options.pending) lastAssistantBubble = bubble;
+  return bubble;
+}
+function splitForSpeech(text, max = 185) {
+  const words = text.replace(/\s+/g, " ").trim().split(" ");
+  const parts = [];
+  let part = "";
+  for (const word of words) {
+    if ((part + " " + word).trim().length > max) {
+      if (part) parts.push(part);
+      part = word;
+    } else part = (part + " " + word).trim();
+  }
+  if (part) parts.push(part);
+  return parts;
+}
+function browserSpeak(text) {
+  return new Promise((resolve, reject) => {
+    if (!("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) {
+      reject(new Error("This browser does not support spoken replies."));
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 0.94;
+    utterance.pitch = 0.88;
+    utterance.onend = resolve;
+    utterance.onerror = () => reject(new Error("Browser voice playback failed."));
+    window.speechSynthesis.speak(utterance);
+  });
+}
+async function speakVision(text, button, preferBrowser = false) {
+  stopVisionAudio();
   const runId = speechRunId;
   button.disabled = true;
-  button.textContent = "Generating voice…";
-
-  const previousError = button.parentElement.querySelector(".voice-error");
-  if (previousError) previousError.remove();
-
-  const chunks = splitForSpeech(text);
+  button.classList.add("speaking");
+  button.innerHTML = "…";
+  const bubble = button.closest(".bubble");
+  const oldError = bubble?.querySelector(".voice-error");
+  if (oldError) oldError.remove();
 
   try {
-    for (const chunk of chunks) {
-      if (runId !== speechRunId) break;
-
-      const response = await fetch("/api/vision-speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: chunk })
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `Voice request failed (${response.status}).`);
+    if (preferBrowser) {
+      await browserSpeak(text);
+    } else {
+      for (const chunk of splitForSpeech(text)) {
+        if (runId !== speechRunId) return;
+        const response = await fetch("/api/vision-speech", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({text: chunk})
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `Voice request failed (${response.status}).`);
+        }
+        const url = URL.createObjectURL(await response.blob());
+        audioUrls.push(url);
+        if (runId !== speechRunId) return;
+        await new Promise((resolve, reject) => {
+          const audio = new Audio(url);
+          activeAudio = audio;
+          audio.onended = resolve;
+          audio.onpause = resolve;
+          audio.onerror = () => reject(new Error("Audio playback failed."));
+          audio.play().catch(reject);
+        });
       }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      audioUrls.push(url);
-
-      if (runId !== speechRunId) break;
-
-      await new Promise((resolve, reject) => {
-        const audio = new Audio(url);
-        activeAudio = audio;
-
-        audio.onended = resolve;
-        audio.onpause = resolve;
-        audio.onerror = () => reject(new Error("Audio playback failed."));
-
-        audio.play().catch(reject);
-      });
     }
-
-    if (runId === speechRunId) {
-      button.textContent = "▶ Listen";
-    }
-
   } catch (error) {
-    if (runId === speechRunId) {
-      button.textContent = "Retry voice";
-      console.error("VISION voice error:", error);
-
+    // If Groq voice access has not been approved yet, keep the Listen control useful.
+    if (!preferBrowser && runId === speechRunId) {
+      try { await browserSpeak(text); }
+      catch (fallbackError) {
+        const status = document.createElement("small");
+        status.className = "voice-error";
+        status.textContent = error.message || fallbackError.message;
+        bubble?.append(status);
+      }
+    } else if (runId === speechRunId) {
       const status = document.createElement("small");
       status.className = "voice-error";
-      status.textContent = error.message || "Voice playback failed.";
-
-      button.insertAdjacentElement("afterend", status);
+      status.textContent = error.message;
+      bubble?.append(status);
     }
-
   } finally {
     if (runId === speechRunId) {
       activeAudio = null;
       button.disabled = false;
+      button.classList.remove("speaking");
+      button.innerHTML = "🔊";
     }
   }
 }
-async function sendVision(){const input=$("visionInput"),text=input.value.trim();if(!text)return;stopVisionAudio();input.value="";addBubble("user",text);chatHistory.push({role:"user",content:text});const pending=addBubble("assistant","VISION is thinking…");$("sendVision").disabled=true;try{const r=await fetch("/api/vision",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:chatHistory})});const data=await r.json();if(!r.ok)throw new Error(data.error||"VISION is unavailable.");pending.querySelector(".bubble-text").textContent=data.reply;const controls=document.createElement("div");controls.className="bubble-controls";const listen=document.createElement("button");listen.className="listen-vision";listen.type="button";listen.textContent="▶ Listen";listen.onclick=()=>speakVision(data.reply,listen);controls.append(listen);pending.append(controls);chatHistory.push({role:"assistant",content:data.reply});if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);}catch(e){pending.querySelector(".bubble-text").textContent=e.message;chatHistory.pop();}finally{$("sendVision").disabled=false;}}
-$("sendVision").onclick=sendVision;
-$("visionInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendVision();}});
-const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(SpeechRecognition){recognition=new SpeechRecognition();recognition.lang="en-NG";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{isListening=true;$("visionMic").classList.add("listening");$("visionMic").textContent="●";};recognition.onresult=e=>{let finalText="",interim="";for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finalText+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}$("visionInput").value=(finalText||interim).trim();};recognition.onerror=()=>{isListening=false;$("visionMic").classList.remove("listening");$("visionMic").textContent="🎤";};recognition.onend=()=>{isListening=false;$("visionMic").classList.remove("listening");$("visionMic").textContent="🎤";};$("visionMic").onclick=()=>{if(isListening)recognition.stop();else{try{recognition.start();}catch(e){console.warn(e);}}};}else{$("visionMic").onclick=()=>{addBubble("assistant","Voice input isn't supported by this browser. You can still type to me, and I'll speak replies aloud.");};}
-$("stopVisionAudio").onclick=stopVisionAudio;
+
+function editUserMessage(bubble) {
+  const body = bubble.querySelector(".bubble-text");
+  const original = body.textContent;
+  const editor = document.createElement("textarea");
+  editor.className = "message-editor";
+  editor.value = original;
+  editor.rows = Math.min(6, Math.max(2, original.split("\n").length));
+  body.replaceWith(editor);
+
+  const controls = document.createElement("div");
+  controls.className = "edit-controls";
+  const save = document.createElement("button");
+  save.className = "chat-action primary";
+  save.textContent = "Save & regenerate";
+  const cancel = document.createElement("button");
+  cancel.className = "chat-action";
+  cancel.textContent = "Cancel";
+  cancel.onclick = () => { editor.replaceWith(body); controls.remove(); };
+  save.onclick = async () => {
+    const revised = editor.value.trim();
+    if (!revised) return;
+    const index = [...$("chatMessages").children].indexOf(bubble);
+    const historyIndex = chatHistory.findIndex((m, i) => m.role === "user" && m.content === original && i <= index);
+    if (historyIndex < 0) { editor.replaceWith(body); controls.remove(); return; }
+    chatHistory = chatHistory.slice(0, historyIndex);
+    chatHistory.push({role:"user", content:revised});
+    body.textContent = revised;
+    editor.replaceWith(body);
+    controls.remove();
+    while (bubble.nextElementSibling) bubble.nextElementSibling.remove();
+    await requestVisionReply();
+  };
+  controls.append(cancel, save);
+  bubble.append(controls);
+  editor.focus();
+}
+
+async function regenerateAssistantReply(bubble) {
+  let previous = bubble.previousElementSibling;
+  while (previous && !previous.classList.contains("user")) previous = previous.previousElementSibling;
+  if (!previous) return;
+  const prompt = previous.querySelector(".bubble-text")?.textContent || "";
+  const historyIndex = chatHistory.map((m, i) => ({m, i}))
+    .filter(x => x.m.role === "user" && x.m.content === prompt)
+    .pop()?.i;
+  if (historyIndex === undefined) return;
+  chatHistory = chatHistory.slice(0, historyIndex + 1);
+  let node = bubble;
+  while (node) {
+    const next = node.nextElementSibling;
+    node.remove();
+    node = next;
+  }
+  await requestVisionReply();
+}
+
+async function requestVisionReply() {
+  stopVisionAudio();
+  const pending = addBubble("assistant", "VISION is thinking…", {pending:true});
+  $("sendVision").disabled = true;
+  try {
+    const response = await fetch("/api/vision", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({messages:chatHistory})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "VISION is unavailable.");
+    pending.remove();
+    const replyBubble = addBubble("assistant", data.reply || "I couldn't form a reply just now.");
+    chatHistory.push({role:"assistant",content:data.reply || ""});
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+    if (liveTalkEnabled) {
+      const voiceButton = replyBubble.querySelector(".listen-vision");
+      if (voiceButton) await speakVision(data.reply, voiceButton);
+      if (liveTalkEnabled) startLiveRecognition();
+    }
+  } catch (error) {
+    pending.querySelector(".bubble-text").textContent = error.message;
+    chatHistory.pop();
+  } finally {
+    $("sendVision").disabled = false;
+    scrollChat();
+  }
+}
+async function sendVision() {
+  const input = $("visionInput");
+  const text = input.value.trim();
+  if (!text || $("sendVision").disabled) return;
+  stopVisionAudio();
+  input.value = "";
+  addBubble("user", text);
+  chatHistory.push({role:"user",content:text});
+  await requestVisionReply();
+}
+$("sendVision").onclick = sendVision;
+$("visionInput").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendVision(); }
+});
+$("visionInput").addEventListener("input", () => {
+  $("visionInput").style.height = "auto";
+  $("visionInput").style.height = Math.min($("visionInput").scrollHeight, 140) + "px";
+});
+
+// One-tap live conversation. Speech recognition is provided by the browser;
+// replies use VISION's speech endpoint, with browser speech as a fallback.
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+function setLiveState(on, message) {
+  liveTalkEnabled = on;
+  const button = $("liveTalk");
+  button?.classList.toggle("live-active", on);
+  if (button) button.setAttribute("aria-label", on ? "End live talk" : "Start live talk");
+  const status = $("liveStatus");
+  if (status) status.textContent = message || (on ? "Listening for you…" : "Live talk is off");
+}
+function startLiveRecognition() {
+  if (!liveTalkEnabled) return;
+  if (!SpeechRecognition) {
+    setLiveState(false, "Live speech recognition isn't supported in this browser.");
+    return;
+  }
+  try {
+    liveRecognition = new SpeechRecognition();
+    liveRecognition.lang = "en-NG";
+    liveRecognition.interimResults = true;
+    liveRecognition.continuous = false;
+    let finalText = "";
+    liveRecognition.onresult = event => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
+        else interim += event.results[i][0].transcript;
+      }
+      $("visionInput").value = (finalText || interim).trim();
+    };
+    liveRecognition.onerror = event => {
+      if (event.error !== "no-speech" && event.error !== "aborted") setLiveState(false, "Microphone: " + event.error);
+    };
+    liveRecognition.onend = async () => {
+      liveRecognition = null;
+      const spoken = finalText.trim();
+      if (!liveTalkEnabled) return;
+      if (spoken) {
+        $("visionInput").value = spoken;
+        await sendVision();
+      } else {
+        setLiveState(true, "Didn't catch that. Listening again…");
+        setTimeout(startLiveRecognition, 350);
+      }
+    };
+    setLiveState(true, "Listening… speak naturally");
+    liveRecognition.start();
+  } catch (error) {
+    setLiveState(false, "Couldn't start the microphone. Check browser permission.");
+  }
+}
+function stopLiveTalk() {
+  liveTalkEnabled = false;
+  if (liveRecognition) {
+    const active = liveRecognition;
+    liveRecognition = null;
+    try { active.onend = null; active.stop(); } catch {}
+  }
+  setLiveState(false, "Live talk is off");
+}
+
+$("visionMic").onclick = () => {
+  if (!SpeechRecognition) {
+    $("liveStatus").textContent = "Voice input isn't supported in this browser.";
+    return;
+  }
+  if (isListening && recognition) { recognition.stop(); return; }
+  try {
+    recognition = new SpeechRecognition();
+    recognition.lang = "en-NG";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onstart = () => { isListening = true; $("visionMic").classList.add("listening"); };
+    recognition.onresult = event => {
+      let value = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) value += event.results[i][0].transcript;
+      $("visionInput").value = value.trim();
+    };
+    recognition.onerror = () => { isListening = false; $("visionMic").classList.remove("listening"); };
+    recognition.onend = () => { isListening = false; $("visionMic").classList.remove("listening"); };
+    recognition.start();
+  } catch (error) { console.warn("VISION microphone:", error); }
+};
+
+$("liveTalk").onclick = () => {
+  if (liveTalkEnabled) {
+    stopLiveTalk();
+    stopVisionAudio();
+  } else {
+    if (!SpeechRecognition) {
+      setLiveState(false, "Live talk needs a browser with speech recognition.");
+      return;
+    }
+    setLiveState(true, "Starting microphone…");
+    startLiveRecognition();
+  }
+};
+
+const welcomeBubble = $("chatMessages").querySelector(".bubble.assistant");
+if (welcomeBubble) {
+  const welcomeCopy = welcomeBubble.querySelector(".copy-message");
+  const welcomeSpeak = welcomeBubble.querySelector(".listen-vision");
+  if (welcomeCopy) welcomeCopy.onclick = () => copyText(welcomeBubble.querySelector(".bubble-text").textContent, welcomeCopy);
+  if (welcomeSpeak) welcomeSpeak.onclick = () => speakVision(welcomeBubble.querySelector(".bubble-text").textContent, welcomeSpeak);
+}
+
+$("stopVisionAudio").onclick = stopVisionAudio;
