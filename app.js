@@ -15,6 +15,8 @@ const auth = getAuth(app), db = getFirestore(app);
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 const $ = id => document.getElementById(id);
 let currentUser = null, stopWatchlist = null;
+const CREATOR_EMAIL = "artdark962@gmail.com";
+let creatorDashboardLoaded = false;
 let chatHistory = [];
 let countdownTimer = null, episodeCountdownTimer = null;
 
@@ -27,10 +29,14 @@ $("loginBtn").onclick = async () => { try { await signInWithEmailAndPassword(aut
 $("registerBtn").onclick = async () => { try { await createUserWithEmailAndPassword(auth,$("email").value,$("password").value); hideAuth(); } catch(e){authStatus(e.message);} };
 $("googleBtn").onclick = async () => { try { await signInWithPopup(auth,new GoogleAuthProvider()); hideAuth(); } catch(e){authStatus(e.message);} };
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   currentUser = user;
   $("userLabel").textContent = user ? (user.displayName || user.email || "Signed in") : "Not signed in";
   $("authOpen").textContent = user ? "Sign out" : "Sign in";
+  const isCreator = !!user && user.emailVerified === true && (user.email || "").toLowerCase() === CREATOR_EMAIL;
+  $("creatorNav").hidden = !isCreator;
+  $("settings").hidden = !isCreator;
+  if (!isCreator && location.hash === "#settings") location.hash = "#home";
   if (stopWatchlist) stopWatchlist();
   if (user) {
     const q = query(collection(db,"users",user.uid,"watchlist"),orderBy("addedAt","desc"),limit(50));
@@ -38,7 +44,48 @@ onAuthStateChanged(auth, user => {
   } else {
     renderWatchlist([]);
   }
+  recordSiteVisit(user).catch(err => console.debug("Visit metric unavailable:", err));
+  if (isCreator) loadCreatorDashboard();
+  else creatorDashboardLoaded = false;
 });
+
+function visitorSessionId(){
+  const key="reelora_visitor_session";
+  let id=sessionStorage.getItem(key);
+  if(!id){id=(crypto.randomUUID?crypto.randomUUID():"v"+Date.now().toString(36)+Math.random().toString(36).slice(2));sessionStorage.setItem(key,id);}
+  return id;
+}
+async function recordSiteVisit(user){
+  const token=user?await user.getIdToken():"";
+  await fetch("/api/creator",{method:"POST",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({visitorId:visitorSessionId(),page:location.pathname+location.hash})});
+}
+function safeCell(value){const el=document.createElement("span");el.textContent=value==null||value===""?"—":String(value);return el;}
+function creatorTable(containerId,headers,rows){
+  const host=$(containerId);host.replaceChildren();
+  if(!rows.length){const p=document.createElement("p");p.className="empty";p.textContent="Nothing recorded yet.";host.append(p);return;}
+  const table=document.createElement("table"),thead=document.createElement("thead"),tr=document.createElement("tr");
+  headers.forEach(h=>{const th=document.createElement("th");th.textContent=h;tr.append(th);});thead.append(tr);table.append(thead);
+  const tbody=document.createElement("tbody");rows.forEach(row=>{const line=document.createElement("tr");row.forEach(value=>{const td=document.createElement("td");td.textContent=value==null||value===""?"—":String(value);line.append(td);});tbody.append(line);});table.append(tbody);host.append(table);
+}
+function formatCreatorDate(value){if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?"—":d.toLocaleString();}
+async function loadCreatorDashboard(){
+  if(!currentUser||currentUser.emailVerified!==true||currentUser.email?.toLowerCase()!==CREATOR_EMAIL)return;
+  const status=$("creatorStatus");status.textContent="Loading account and visitor records…";
+  try{
+    const token=await currentUser.getIdToken(true);
+    const response=await fetch("/api/creator",{headers:{Authorization:`Bearer ${token}`}});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to load creator dashboard.");
+    $("creatorUserCount").textContent=data.users.length;
+    $("creatorVisitCount").textContent=data.visits.length;
+    $("creatorPageViews").textContent=data.visits.reduce((sum,v)=>sum+v.pageViews,0);
+    creatorTable("creatorUsers",["Account","Display name","Created","Last sign-in","Status"],data.users.map(u=>[u.email,u.displayName,formatCreatorDate(u.createdAt),formatCreatorDate(u.lastSignInAt),u.disabled?"Disabled":"Active"]));
+    creatorTable("creatorVisits",["Visitor","Account / session","Page","Views","Last seen"],data.visits.map(v=>[v.uid?"Signed in":"Anonymous",v.email||v.visitorId,v.page,v.pageViews,formatCreatorDate(v.lastSeen)]));
+    status.textContent=`Updated ${formatCreatorDate(data.generatedAt)}. Anonymous visitor sessions are not personally identified.`;
+    creatorDashboardLoaded=true;
+  }catch(error){status.textContent=error.message;creatorTable("creatorUsers",["Account"],[]);creatorTable("creatorVisits",["Visitor"],[]);}
+}
+$("refreshCreator").addEventListener("click",loadCreatorDashboard);
+window.addEventListener("hashchange",()=>{recordSiteVisit(currentUser).catch(err=>console.debug("Visit metric unavailable:",err));if(location.hash==="#settings"&&currentUser?.emailVerified===true&&currentUser?.email?.toLowerCase()===CREATOR_EMAIL)loadCreatorDashboard();});
 function posterUrl(path){return path ? `https://image.tmdb.org/t/p/w342${path}` : "";}
 function titleCard(item, saved=false) {
   const card=document.createElement("article");card.className="title-card";

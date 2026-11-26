@@ -82,3 +82,18 @@ VISION now uses a consistent synthezoid persona and can generate spoken replies 
 
 ### TV episode countdowns
 Upcoming episodes now display an individual live countdown in the season episode list. The countdown uses the air date returned by TMDB and counts to the start of that date in the visitor's local timezone. TMDB generally supplies a date rather than an exact premiere time, so the timer should not be interpreted as an exact release-hour guarantee. This display works for any TV series with upcoming episode air dates available from TMDB.
+
+
+MOBILE CHAT VISIBILITY FIX: The VISION panel is hidden by default and opens only when its open class is applied. This prevents it from covering the REELORA movie interface on page load.
+
+
+## Coming Soon discovery
+The Coming Soon hub automatically loads upcoming movies and TV series across genres. The genre selector is optional and defaults to All genres. It uses the TMDB discover and genre endpoints through `/api/tmdb`. No additional environment variable is required beyond `TMDB_API_KEY`.
+
+
+## Creator dashboard and visitor analytics
+The verified account `artdark962@gmail.com` alone sees the Creator Settings tab. Email verification is required so an unverified registration cannot claim the creator address. The dashboard lists Firebase Authentication accounts (email, display name, creation time, last sign-in, enabled/disabled status) and recent site visit sessions/page views. Visitors who are not signed in are shown as anonymous session IDs. REELORA does not collect IP addresses or attempt to identify anonymous visitors.
+
+Set `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel to the service-account JSON for the same Firebase project. The `firebase-admin` package is installed by the deployment. The `/api/creator` endpoint verifies Firebase ID tokens server-side and checks the creator email before returning user and visit data. Keep Firestore in production mode; do not add public read rules for `siteVisits` or `publicUserProfiles`. Existing `/users/{uid}` per-user rules can remain unchanged.
+
+The dashboard can show accounts created through REELORA and their latest Firebase sign-in metadata. It cannot reveal people who browse privately without signing in as named individuals. Add a short privacy notice to your site explaining that basic visit/session analytics and account activity are recorded.
