@@ -15,7 +15,7 @@ const auth = getAuth(app), db = getFirestore(app);
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 const $ = id => document.getElementById(id);
 let currentUser = null, stopWatchlist = null;
-const CREATOR_EMAIL = "artdark962@gmail.com";
+const CREATOR_EMAIL = "favourejiro42@gmail.com";
 let creatorDashboardLoaded = false;
 let chatHistory = [];
 let countdownTimer = null, episodeCountdownTimer = null;

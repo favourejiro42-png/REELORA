@@ -92,7 +92,7 @@ The Coming Soon hub automatically loads upcoming movies and TV series across gen
 
 
 ## Creator dashboard and visitor analytics
-The verified account `artdark962@gmail.com` alone sees the Creator Settings tab. Email verification is required so an unverified registration cannot claim the creator address. The dashboard lists Firebase Authentication accounts (email, display name, creation time, last sign-in, enabled/disabled status) and recent site visit sessions/page views. Visitors who are not signed in are shown as anonymous session IDs. REELORA does not collect IP addresses or attempt to identify anonymous visitors.
+The verified account `favourejiro42@gmail.com` alone sees the Creator Settings tab. Email verification is required so an unverified registration cannot claim the creator address. The dashboard lists Firebase Authentication accounts (email, display name, creation time, last sign-in, enabled/disabled status) and recent site visit sessions/page views. Visitors who are not signed in are shown as anonymous session IDs. REELORA does not collect IP addresses or attempt to identify anonymous visitors.
 
 Set `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel to the service-account JSON for the same Firebase project. The `firebase-admin` package is installed by the deployment. The `/api/creator` endpoint verifies Firebase ID tokens server-side and checks the creator email before returning user and visit data. Keep Firestore in production mode; do not add public read rules for `siteVisits` or `publicUserProfiles`. Existing `/users/{uid}` per-user rules can remain unchanged.
 
